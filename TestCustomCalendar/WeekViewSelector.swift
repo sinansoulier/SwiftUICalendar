@@ -16,6 +16,7 @@ struct WeekViewSelector: View {
         HStack {
             ForEach(self.weekStarts, id: \.self) { date in
                 DaySelector(date: date, selectedDate: $selectedDate)
+                    .id(date)
                 if date != self.weekStarts.last {
                     Spacer()
                 }

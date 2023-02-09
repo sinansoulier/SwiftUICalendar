@@ -13,7 +13,7 @@ extension Date {
         let dateInWeek = self
 
         let calendar = Calendar.current
-        let dayOfWeek = calendar.component(.weekday, from: dateInWeek) - 1
+        let dayOfWeek = calendar.component(.weekday, from: dateInWeek)
         let weekdays = calendar.range(of: .weekday, in: .weekOfYear, for: dateInWeek)!
         let days = (weekdays.lowerBound ..< weekdays.upperBound).compactMap { calendar.date(byAdding: .day, value: $0 - dayOfWeek, to: dateInWeek) }.map { Calendar.current.startOfDay(for: $0) }
 

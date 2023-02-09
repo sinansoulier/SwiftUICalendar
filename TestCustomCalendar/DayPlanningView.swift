@@ -31,7 +31,7 @@ struct DayPlanningView: View {
                             self.maxTextWidth = self.everyHourOfDay.map { $0.getHourString().size(OfFont: self.uiFont).width }.max()!
                         }
                 }
-                .frame(height: proxy.frame(in: .local).minY + (self.height + 4) * CGFloat(self.everyHourOfDay.count - 1) + 20)
+                .frame(height: proxy.frame(in: .local).minY + (self.height + 4) * abs(CGFloat(self.everyHourOfDay.count - 1)) + 20)
                 .onAppear {
                     self.everyHourOfDay = self.date.everyHourOfDay()
                     self.halfLineHeight = self.uiFont.lineHeight / 2

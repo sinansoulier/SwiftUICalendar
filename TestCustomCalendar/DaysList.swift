@@ -13,11 +13,8 @@ struct DaysList: View {
     @State var tabViewWeekDate: Date = Date().startOfWeek()
     
     @State var weeks: [Date] = [Date]()
-    @State var dayText: String = ""
     
     @State var weekOffset: CGFloat = .zero
-    @State var planningOffset: CGFloat = .zero
-    @State var width: CGFloat = .zero
     @State var days: [Date] = [Date]()
     @State var didTapTodayButton: Bool = false
     
@@ -27,39 +24,31 @@ struct DaysList: View {
                 self.didTapTodayButton = true
             }
             
+            Text(self.tabViewWeekDate.description)
             TabView(selection: self.$tabViewWeekDate) {
                 ForEach(self.weeks, id: \.self) { date in
-                    VStack {
-                        GeometryReader { proxy in
+                    GeometryReader { proxy in
+                        VStack {
                             WeekViewSelector(currentDate: date, selectedDate: self.$selectedDate)
                                 .overlay(
                                     Color.clear
-                                        .onAppear {
-                                            self.width = proxy.frame(in: .global).width
-                                        }
                                         .preference(key: WeekOffsetKey.self, value: proxy.frame(in: .global).minX)
+                                        .frame(height: 70)
                                 )
                                 .onPreferenceChange(WeekOffsetKey.self) { newValue in
                                     withAnimation {
                                         self.weekOffset = newValue.truncatingRemainder(dividingBy: proxy.frame(in: .global).width)
                                     }
                                 }
-                                .tag(date)
-                                
-                        }
-                        .frame(height: 60)
-                        
-                        Text(self.selectedDate.description)
-                        
-                        TabView(selection: self.$selectedDate) {
-                            ForEach(date.getWeekDays(), id: \.self) { day in
-                                DayPlanningView(date: day)
-                                    
+                            
+                            Text(self.selectedDate.description)
+                            TabView(selection: self.$selectedDate) {
+                                ForEach(date.getWeekDays(), id: \.self) { day in
+                                    DayPlanningView(date: day)
+                                }
                             }
+                            .tabViewStyle(.page(indexDisplayMode: .never))
                         }
-                        .id(date.getWeekDays().count)
-                        .tabViewStyle(.page(indexDisplayMode: .never))
-                        
                     }
                 }
             }
@@ -67,21 +56,22 @@ struct DaysList: View {
             .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
             .onChange(of: self.weekOffset) { newOffset in
                 if newOffset == .zero {
-                    switch self.tabViewWeekDate {
-                    case self.weeks.first:
-                        self.weeks.insert(self.tabViewWeekDate.startOfPreviousWeek(), at: 0)
-                    case self.weeks.last:
-                        self.weeks.append(self.tabViewWeekDate.startOfNextWeek())
-                    default:
-                        break
+                    withAnimation {
+                        switch self.tabViewWeekDate {
+                        case self.weeks.first:
+                            self.weeks.insert(self.tabViewWeekDate.startOfPreviousWeek(), at: 0)
+                        case self.weeks.last:
+                            self.weeks.append(self.tabViewWeekDate.startOfNextWeek())
+                        default:
+                            break
+                        }
                     }
+                    
                     if !self.tabViewWeekDate.getWeekDays().contains(self.selectedDate) {
                         let value: Int = self.tabViewWeekDate > self.selectedDate ? 1 : -1
-                        var calendarComponent: Calendar.Component = .weekOfYear
-                        if tabViewWeekDate == tabViewWeekDate.startOfWeek() || tabViewWeekDate == tabViewWeekDate.getWeekDays().last {
-                            calendarComponent = .day
-                        }
-                        self.selectedDate = Calendar.current.date(byAdding: calendarComponent, value: value, to: self.selectedDate)!
+                        var component: Calendar.Component = .weekOfYear
+                        let weekDays = self.selectedDate.startOfWeek().getWeekDays().sorted()
+                        self.selectedDate = Calendar.current.date(byAdding: component, value: value, to: self.selectedDate)!
                     }
                 }
             }
@@ -92,7 +82,6 @@ struct DaysList: View {
                     self.didTapTodayButton = false
                 }
             }
-            .ignoresSafeArea()
         }
         .onAppear {
             self.initWeeks()
@@ -106,13 +95,6 @@ struct DaysList: View {
         
         self.weeks.append(contentsOf: [startOfPreviousWeek, startOfCurrentWeek, startOfNextWeek].sorted())
         self.days = self.weeks.flatMap { $0.getWeekDays() }
-    }
-}
-
-struct DaysList_Previews: PreviewProvider {
-    static var previews: some View {
-        DaysList()
-            .environmentObject(CalendarDatesProvider())
     }
 }
 
@@ -131,3 +113,12 @@ struct PlanningOffsetKey: PreferenceKey {
         value = nextValue()
     }
 }
+
+#if DEBUG
+struct DaysList_Previews: PreviewProvider {
+    static var previews: some View {
+        DaysList()
+            .environmentObject(CalendarDatesProvider())
+    }
+}
+#endif
