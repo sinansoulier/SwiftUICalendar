@@ -9,7 +9,6 @@ import SwiftUI
 
 struct DaysList: View {
     @State var selectedDate: Date = Date().startOfDay()
-    @State var secondSelectedDate: Date = Date().startOfDay()
     
     @State var tabViewWeekDate: Date = Date().startOfWeek()
     
@@ -27,23 +26,40 @@ struct DaysList: View {
             Button("Back to today") {
                 self.didTapTodayButton = true
             }
+            
             TabView(selection: self.$tabViewWeekDate) {
                 ForEach(self.weeks, id: \.self) { date in
-                    GeometryReader { proxy in
-                        WeekViewSelector(currentDate: date, selectedDate: self.$selectedDate)
-                            .overlay(
-                                Color.clear
-                                    .onAppear {
-                                        self.width = proxy.frame(in: .global).width
+                    VStack {
+                        GeometryReader { proxy in
+                            WeekViewSelector(currentDate: date, selectedDate: self.$selectedDate)
+                                .overlay(
+                                    Color.clear
+                                        .onAppear {
+                                            self.width = proxy.frame(in: .global).width
+                                        }
+                                        .preference(key: WeekOffsetKey.self, value: proxy.frame(in: .global).minX)
+                                )
+                                .onPreferenceChange(WeekOffsetKey.self) { newValue in
+                                    withAnimation {
+                                        self.weekOffset = newValue.truncatingRemainder(dividingBy: proxy.frame(in: .global).width)
                                     }
-                                    .preference(key: WeekOffsetKey.self, value: proxy.frame(in: .global).minX)
-                            )
-                            .onPreferenceChange(WeekOffsetKey.self) { newValue in
-                                withAnimation {
-                                    self.weekOffset = newValue.truncatingRemainder(dividingBy: proxy.frame(in: .global).width)
                                 }
+                                .tag(date)
+                                
+                        }
+                        .frame(height: 60)
+                        
+                        Text(self.selectedDate.description)
+                        
+                        TabView(selection: self.$selectedDate) {
+                            ForEach(date.getWeekDays(), id: \.self) { day in
+                                DayPlanningView(date: day)
+                                    
                             }
-                            .tag(date)
+                        }
+                        .id(date.getWeekDays().count)
+                        .tabViewStyle(.page(indexDisplayMode: .never))
+                        
                     }
                 }
             }
@@ -61,7 +77,11 @@ struct DaysList: View {
                     }
                     if !self.tabViewWeekDate.getWeekDays().contains(self.selectedDate) {
                         let value: Int = self.tabViewWeekDate > self.selectedDate ? 1 : -1
-                        self.selectedDate = Calendar.current.date(byAdding: .weekOfYear, value: value, to: self.selectedDate)!
+                        var calendarComponent: Calendar.Component = .weekOfYear
+                        if tabViewWeekDate == tabViewWeekDate.startOfWeek() || tabViewWeekDate == tabViewWeekDate.getWeekDays().last {
+                            calendarComponent = .day
+                        }
+                        self.selectedDate = Calendar.current.date(byAdding: calendarComponent, value: value, to: self.selectedDate)!
                     }
                 }
             }
@@ -72,8 +92,7 @@ struct DaysList: View {
                     self.didTapTodayButton = false
                 }
             }
-            .frame(height: 75)
-            .transition(.slide)
+            .ignoresSafeArea()
         }
         .onAppear {
             self.initWeeks()
